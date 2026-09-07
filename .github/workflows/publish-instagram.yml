@@ -1,0 +1,31 @@
+name: Publish carousel to Instagram
+on:
+  schedule:
+    - cron: "0 16 * * 1,3,5"
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Queue folder to publish (blank = oldest)"
+        required: false
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish oldest queued carousel
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          ONLY_SLUG: ${{ github.event.inputs.slug }}
+        run: python3 scripts/publish_carousel.py
+      - name: Commit the queue change
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name  "carousel-bot"
+            git config user.email "carousel-bot@users.noreply.github.com"
+            git add -A
+            git commit -m "Published carousel, moved from queue to published"
+            git push
+          fi
